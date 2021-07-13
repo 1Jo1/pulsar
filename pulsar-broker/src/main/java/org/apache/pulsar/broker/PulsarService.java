@@ -304,7 +304,7 @@ public class PulsarService implements AutoCloseable {
             this.transactionReplayExecutor = null;
         }
 
-        this.ioEventLoopGroup = EventLoopUtil.newEventLoopGroup(config.getNumIOThreads(), config.isEnableBusyWait(),
+        this.ioEventLoopGroup = EventLoopUtil.newEventLoopGroup(1, config.isEnableBusyWait(),
                 new DefaultThreadFactory("pulsar-io"));
     }
 

@@ -20,14 +20,6 @@ package org.apache.pulsar.common.util.netty;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.SelectStrategy;
-import io.netty.channel.epoll.Epoll;
-import io.netty.channel.epoll.EpollChannelOption;
-import io.netty.channel.epoll.EpollDatagramChannel;
-import io.netty.channel.epoll.EpollEventLoopGroup;
-import io.netty.channel.epoll.EpollMode;
-import io.netty.channel.epoll.EpollServerSocketChannel;
-import io.netty.channel.epoll.EpollSocketChannel;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.ServerSocketChannel;
@@ -35,10 +27,12 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ThreadFactory;
+import io.netty.incubator.channel.uring.*;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.bookkeeper.common.util.affinity.CpuAffinity;
+
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ThreadFactory;
 
 @SuppressWarnings("checkstyle:JavadocType")
 @Slf4j
@@ -48,16 +42,17 @@ public class EventLoopUtil {
      * @return an EventLoopGroup suitable for the current platform
      */
     public static EventLoopGroup newEventLoopGroup(int nThreads, boolean enableBusyWait, ThreadFactory threadFactory) {
-        if (Epoll.isAvailable()) {
-            if (!enableBusyWait) {
-                // Regular Epoll based event loop
-                return new EpollEventLoopGroup(nThreads, threadFactory);
-            }
+        if (IOUring.isAvailable()) {
+//            if (!enableBusyWait) {
+//                // Regular Epoll based event loop
+//                return new EpollEventLoopGroup(nThreads, threadFactory);
+//            }
 
             // With low latency setting, put the Netty event loop on busy-wait loop to reduce cost of
             // context switches
-            EpollEventLoopGroup eventLoopGroup = new EpollEventLoopGroup(nThreads, threadFactory,
-                    () -> (selectSupplier, hasTasks) -> SelectStrategy.BUSY_WAIT);
+            IOUringEventLoopGroup eventLoopGroup = new IOUringEventLoopGroup(nThreads, threadFactory);
+
+            //SelectStrategyFactory df = () -> (selectSupplier1, hasTasks1) -> SelectStrategy.BUSY_WAIT;
 
             // Enable CPU affinity on IO threads
             for (int i = 0; i < nThreads; i++) {
@@ -85,33 +80,33 @@ public class EventLoopUtil {
      * @return
      */
     public static Class<? extends SocketChannel> getClientSocketChannelClass(EventLoopGroup eventLoopGroup) {
-        if (eventLoopGroup instanceof EpollEventLoopGroup) {
-            return EpollSocketChannel.class;
+        if (eventLoopGroup instanceof IOUringEventLoopGroup) {
+            return IOUringSocketChannel.class;
         } else {
             return NioSocketChannel.class;
         }
     }
 
     public static Class<? extends ServerSocketChannel> getServerSocketChannelClass(EventLoopGroup eventLoopGroup) {
-        if (eventLoopGroup instanceof EpollEventLoopGroup) {
-            return EpollServerSocketChannel.class;
+        if (eventLoopGroup instanceof IOUringEventLoopGroup) {
+            return IOUringServerSocketChannel.class;
         } else {
             return NioServerSocketChannel.class;
         }
     }
 
     public static Class<? extends DatagramChannel> getDatagramChannelClass(EventLoopGroup eventLoopGroup) {
-        if (eventLoopGroup instanceof EpollEventLoopGroup) {
-            return EpollDatagramChannel.class;
+        if (eventLoopGroup instanceof IOUringEventLoopGroup) {
+            return IOUringDatagramChannel.class;
         } else {
             return NioDatagramChannel.class;
         }
     }
 
     public static void enableTriggeredMode(ServerBootstrap bootstrap) {
-        if (Epoll.isAvailable()) {
-            bootstrap.childOption(EpollChannelOption.EPOLL_MODE, EpollMode.LEVEL_TRIGGERED);
-        }
+//        if (Epoll.isAvailable()) {
+//            bootstrap.childOption(EpollChannelOption.EPOLL_MODE, EpollMode.LEVEL_TRIGGERED);
+//        }
     }
 
     /**
