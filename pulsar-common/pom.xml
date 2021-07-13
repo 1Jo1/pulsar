@@ -73,8 +73,9 @@
     </dependency>
 
     <dependency>
-      <groupId>io.netty</groupId>
-      <artifactId>netty-transport-native-epoll</artifactId>
+      <groupId>io.netty.incubator</groupId>
+      <artifactId>netty-incubator-transport-native-io_uring</artifactId>
+      <version>0.0.8.Final</version>
       <classifier>linux-x86_64</classifier>
     </dependency>
 
